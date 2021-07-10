@@ -1,271 +1,181 @@
 
 'use strict';
 
-function generateDisplayString(str, delimiter) {
-  return str
-    .split(delimiter).map(function(word) {
-      return word[0].toUpperCase() + word.substr(1);
-    }).join(' ');
+var allProductNames = ['bag', 'banana', 'bathroom', 'boots', 'breakfast', 'bubblegum', 'chair', 'cthulhu', 'dog-duck', 'dragon', 'pen', 'pet-sweep', 'scissors', 'shark', 'sweep', 'tauntaun', 'unicorn', 'usb', 'water-can', 'wine-glass'];
+var allProductSrc = ['./img/bag.jpg', './img/banana.jpg', './img/bathroom.jpg', './img/boots.jpg', './img/breakfast.jpg', './img/bubblegum.jpg', './img/chair.jpg', './img/cthulhu.jpg', './img/dog-duck.jpg', './img/dragon.jpg', './img/pen.jpg', './img/pet-sweep.jpg', './img/scissors.jpg', './img/shark.jpg', './img/sweep.png', './img/tauntaun.jpg', './img/unicorn.jpg', './img/usb.gif', './img/water-can.jpg', './img/wine-glass.jpg'];
+
+var productContainer = document.getElementById('allProducts');
+var buttonLinks = document.getElementById('buttonLinks');
+var stats = document.getElementById('stats');
+var chartContainer = document.getElementById('chartContainer');
+
+var leftImgTag = document.getElementById('left');
+var middleImgTag = document.getElementById('center');
+var rightImgTag = document.getElementById('right');
+
+var totalClicks = 0;
+//holds all products instantiated
+Product.allProducts = [];
+//holds 6 values
+Product.checkDupes = [];
+
+// //store products already on the page
+var leftProduct = null;
+var middleProduct = null;
+var rightProduct = null;
+
+function Product(name, src) {
+  this.name = name;
+  this.src = src;
+  this.clicks = 0;
+  this.timesShown = 0;
+  Product.allProducts.push(this);
 }
 
-function Product(filenameBase) {
-  this.displayName = generateDisplayString(filenameBase, '-');
-  this.baseName = filenameBase;
-  this.path = 'img/'.concat(filenameBase).concat('.jpg');
-  this.voteTally = 0;
-  this.shownTally = 0;
+function instantiateProducts () {
+  for(var i = 0; i < allProductNames.length; i++) {
+    new Product(allProductNames[i], allProductSrc[i]);
+  }
 }
 
-/*****************************************************************************
- * All Execution and Globals Below
- */
-const NUMIMGTODISPLAY = 3;
-const MAXCLICKS = 25;
-var baseProductNames = [
-  'bag',
-  'banana',
-  'bathroom',
-  'boots',
-  'breakfast',
-  'bubblegum',
-  'chair',
-  'cthulhu',
-  'dog-duck',
-  'dragon',
-  'pen',
-  'pet-sweep',
-  'scissors',
-  'shark',
-  'sweep',
-  'tauntaun',
-  'unicorn',
-  'water-can',
-  'wine-glass',
-];
+function randomNumber() {
+  return Math.floor(Math.random() * Product.allProducts.length);
+}
 
-var productRank = {
-  productHash: {}, /* key is product path */
-  productList: [], /* list of all products */
-  /* two bags to hold products for display purposes */
-  bag: {
-    active: 'a',
-    a: [],
-    b: [],
-  },
-  imgEls: [],
-  clickCount: 0,
-  chart: null,
-
-  generateProducts: function () {
-    for (let i = 0; i < baseProductNames.length; i++) {
-      var prod = new Product(baseProductNames[i]);
-      console.log('Product:', prod);
-      // add it to the hash based on filepath
-      this.productHash[prod.path] = prod;
-      // add it to the product list
-      this.productList.push(prod);
+function displayProducts() {
+  //generate array of random # that correlates with each index
+  while (Product.checkDupes.length < 6) {
+    var number = randomNumber();
+    //if the number is not in the array, then that image has not been shown,
+    //so push the number into the array
+    if (!Product.checkDupes.includes(number)) {
+      Product.checkDupes.push(number);
     }
-  },
+    //do this until the array is at 6 numbers again
+    //all 6 numbers are unique
+  }
+  leftImgTag.src = Product.allProducts[Product.checkDupes[0]].src;
+  Product.allProducts[Product.checkDupes[0]].timesShown++;
+  leftProduct = Product.allProducts[Product.checkDupes[0]];
 
-  configureListeners: function () {
-    var section = document.getElementById('images-section');
-    for (let i = 0; i < NUMIMGTODISPLAY; i++) {
-      // obtain the image element
-      var imgEl = document.createElement('img');
-      imgEl.id = 'img-'.concat(i);
-      imgEl.className = 'click-images';
+  middleImgTag.src = Product.allProducts[Product.checkDupes[1]].src;
+  Product.allProducts[Product.checkDupes[1]].timesShown++;
+  middleProduct = Product.allProducts[Product.checkDupes[1]];
 
-      // store it for retrieval
-      this.imgEls.push(imgEl);
-      imgEl.addEventListener('click', this.onClick);
+  rightImgTag.src = Product.allProducts[Product.checkDupes[2]].src;
+  Product.allProducts[Product.checkDupes[2]].timesShown++;
+  rightProduct = Product.allProducts[Product.checkDupes[2]];
 
-      // Attach to page
-      section.appendChild(imgEl);
-    }
-  },
+  //only keep the last 3 numbers because the first 3 have been used
+  //these 3 nums will now be at the beginning of checkDupes
+  Product.checkDupes = Product.checkDupes.slice(3, 6);
+}
 
-  initGame: function () {
-    console.log('Re-initializing game.');
-    // blow away any buttons and tables
-    let section = document.getElementById('button-section');
-    section.innerHTML = '';
-    section = document.getElementById('results-section');
-    section.innerHTML = '';
-    productRank.showResults();
+function renderStats() {
+  var h1El = document.createElement('h1');
+  h1El.textContent = 'Stats';
+  stats.appendChild(h1El);
 
-    // empty both bags, set bag-a active and then fill bag-a
-    // games always start picking from on bag-a
-    this.bag.a = [];
-    this.bag.b = [];
-    this.bag.active = 'a';
-    this.clickCount = 0;
+  var buttonEl = document.createElement('a');
+  buttonEl.textContent = 'Stats';
+  buttonEl.setAttribute('class', 'btn');
+  buttonEl.href = '#statsContainer';
+  buttonLinks.appendChild(buttonEl);
 
-    // clear product stats
-    for (let i in this.productList) {
-      let prod = this.productList[i];
-      // bag-a is the starting bag
-      this.bag.a.push(prod);
-      console.log('Initializing product:', prod);
-    }
-  },
+  for (var i = 0; i < Product.allProducts.length; i++) {
+    var liEl = document.createElement('li');
+    liEl.textContent = Product.allProducts[i].clicks + ' votes for ' + Product.allProducts[i].name;
+    stats.appendChild(liEl);
+  }
+}
 
-  getRandomIndex: function(arrayLength) {
-    // Generate a random index number that falls within our product list
-    return Math.floor(Math.random() * arrayLength);
-  },
+function renderChart() {
+  var canvasEl = document.createElement('canvas');
+  canvasEl.setAttribute = ('id', 'productChart');
+  chartContainer.style.width = '500px';
+  chartContainer.style.height = '500px';
+  chartContainer.appendChild(canvasEl);
 
-  displayImages: function() {
-    /*
-     *Pull three items and put them in a products array. This guarantees
-     * no duplicates for this particular showing of images. Whichever bag
-     * was used to pull items from previously is the active bag. Place all
-     * of the items in the opposite bag. This method should be fairly
-     * efficient and guarantee no duplicates, that all images are displayed
-     * before re-displaying other images.
-     */
-    let idx;
-    var prod;
-    var products = [];
+  var buttonEl = document.createElement('a');
+  buttonEl.textContent = 'Chart';
+  buttonEl.setAttribute('class', 'btn');
+  buttonEl.href = '#chartContainer';
+  buttonLinks.appendChild(buttonEl);
 
-    // populate all image elements
-    for (let i = 0; i < this.imgEls.length; i++) {
-      // Check if the active bag needs to be updated
-      if (this.bag.a.length === 0) {
-        this.bag.active = 'b';
-      } else if (this.bag.b.length === 0) {
-        this.bag.active = 'a';
-      }
+  var ctx = canvasEl.getContext('2d');
+  var votes = [];
+  var names = [];
+  for(var i = 0; i < Product.allProducts.length; i++) {
+    votes[i] = Product.allProducts[i].clicks;
+    names[i] = Product.allProducts[i].name;
+  }
 
-      // Use the active bucket as long as it isn't empty
-      if (this.bag.active === 'a') {
-        idx = this.getRandomIndex(this.bag.a.length);
-        // get product, remove it from bag-a list
-        prod = this.bag.a.splice(idx, 1)[0];
-        console.log('Pulling', prod.displayName, ' from bag a');
-        // add product to products
-        products.push(prod);
-      } else {
-        // find an image, avoid duplicate
-        idx = this.getRandomIndex(this.bag.b.length);
-        // get product, remove it from bag-a list
-        prod = this.bag.b.splice(idx, 1)[0];
-        console.log('Pulling', prod.displayName, 'from bag b');
-        // add product to products
-        products.push(prod);
-      }
-
-      // Set the image source and append it to the section
-      var imgEl = this.imgEls[i];
-      imgEl.src = prod.path;
-      // Increment the display
-      prod.shownTally++;
-    }
-
-    // place all chosen items into the bucket last active
-    if (this.bag.active === 'a') {
-      this.bag.b.push.apply(this.bag.b, products);
-    } else {
-      this.bag.a.push.apply(this.bag.a, products);
-    }
-    console.log('bag a:', this.bag.a);
-    console.log('bag b:', this.bag.b);
-    console.log('prod arr', products);
-  },
-
-  showButton: function(text, handler) {
-    var section = document.getElementById('button-section');
-    var button = document.createElement('input');
-    // clear the button section first
-    section.innerHTML = '';
-    button.type = 'button';
-    button.className = 'game-button';
-    button.value = text;
-    section.appendChild(button);
-    button.addEventListener('click', handler);
-  },
-
-  showResults: function () {
-    var section = document.getElementById('results-section');
-    var canvas = document.createElement('canvas');
-    section.appendChild(canvas);
-    canvas.id = 'results-chart';
-
-    var ctx = canvas.getContext('2d');
-    productRank.chart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: productRank.productList.map(function (prod) { return prod.displayName; }),
-        datasets: [{
-          label: 'Product Vote Count',
-          data: productRank.productList.map(function (prod) { return prod.voteTally; }),
-        }]
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: names,
+      datasets: [{
+        data: votes,
+        label: 'Votes',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      title: {
+        display: true,
+        text: 'Votes Per Product',
+        fontSize: 50
       },
-      options: {
-        scales: {
-          yAxes: [{
-            ticks: {
-              beginAtZero: true,
-              fixedStepSize: 1
-            }
-          }]
-        }
+      scales: {
+        yAxes: [{
+          ticks: {
+            beginAtZero: true,
+            stepSize: 1
+          }
+        }]
       }
-    });
-  },
-
-  updateResults: function () {
-    productRank.chart.data.datasets[0].data = productRank.productList.map(function (prod) {
-      return prod.voteTally;
-    });
-    productRank.chart.update();
-  },
-
-  onClick: function(e) {
-    console.log('Click Count:', productRank.clickCount);
-    // Check if the game is already over
-    if (productRank.clickCount < MAXCLICKS) {
-      var pathArr = e.target.src.split('/');
-      var path = 'img/'.concat(pathArr[pathArr.length - 1]);
-      console.log('path:', path);
-      var prod = productRank.productHash[path];
-
-      productRank.clickCount++;
-      prod.voteTally++;
-      console.log('clickCount:', productRank.clickCount);
-      console.log('Acquired product from click:', prod);
-
-      productRank.stashProductStats();
-      productRank.updateResults();
-
-      if (productRank.clickCount === MAXCLICKS) {
-        productRank.showButton('Restart Game', productRank.startGame);
-      }
-
-      productRank.displayImages();
     }
-  },
+  });
+}
 
-  startGame: function () {
-    productRank.initGame();
-    productRank.displayImages();
-  },
+function checkStorage () {
+  if(localStorage.setProducts) {
+    var stringifyProducts = localStorage.getItem('setProducts');
+    Product.allProducts = JSON.parse(stringifyProducts);
+  } else {
+    instantiateProducts();
+  }
+}
 
-  stashProductStats: function () {
-    localStorage.setItem('products', JSON.stringify(this.productList));
-  },
+var handleClick = function(event) {
+  if (event.target === productContainer) {
+    return alert('click on an image, please');
+  }
+  totalClicks++;
+  var clickedProduct = event.target;
+  var id = clickedProduct.id;
+  if (id === 'left') {
+    leftProduct.clicks++;
+  }
+  if (id === 'center') {
+    middleProduct.clicks++;
+  }
+  if (id === 'right') {
+    rightProduct.clicks++;
+  }
 
-  unstashLocalStorage: function () {
-    var products = JSON.parse(localStorage.products);
-    products.map(function (p) {
-      var prod = productRank.productHash[p.path];
-      // restore preserved data
-      prod.voteTally = p.voteTally;
-      prod.shownTally = p.shownTally;
-    });
-  },
+  if(totalClicks === 25) {
+    productContainer.removeEventListener('click', handleClick);
+    renderStats();
+    renderChart();
+    localStorage.setItem('setProducts', JSON.stringify(Product.allProducts));
+  }
+  displayProducts();
 };
 
-productRank.generateProducts();
-productRank.configureListeners();
-if (localStorage.products) productRank.unstashLocalStorage();
-productRank.startGame();
+checkStorage();
+displayProducts();
+
+productContainer.addEventListener('click', handleClick);
